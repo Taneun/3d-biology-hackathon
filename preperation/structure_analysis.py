@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
             # Get peptide center of mass distance from the reference center of mass
             model_com = centre_of_mass(model_pep_atoms)
-            dists.append(None)  # TODO: fill this line
+            dists.append(com_distance(ref_com, model_com))  # TODO: fill this line
 
             labels.append(cls)
 
