@@ -92,8 +92,9 @@ if __name__ == "__main__":
     dists = -dists  # we want larger score -> positive
 
     # Plot ROC and boxplot
-    plot_roc_curve(labels, dists, out_file_path="com_roc_curve.png")
-    plot_roc_curve(labels, plddts, out_file_path="plddt_roc_curve.png")
+    os.makedirs("plots", exist_ok=True)
+    plot_roc_curve(labels, dists, out_file_path="plots/com_roc_curve.png")
+    plot_roc_curve(labels, plddts, out_file_path="plots/plddt_roc_curve.png")
 
-    plot_boxplot({"Positive Test": dists[labels == 1], "Negative Test": dists[labels == 0]}, out_file_path="com_boxplot.png")
-    plot_boxplot({"Positive Test": plddts[labels == 1], "Negative Test": plddts[labels == 0]}, out_file_path="plddt_boxplot.png")
+    plot_boxplot({"Positive Test": dists[labels == 1], "Negative Test": dists[labels == 0]}, out_file_path="plots/com_boxplot.png")
+    plot_boxplot({"Positive Test": plddts[labels == 1], "Negative Test": plddts[labels == 0]}, out_file_path="plots/plddt_boxplot.png")

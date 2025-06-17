@@ -4,7 +4,7 @@ from pep_utils import load_peptide_data, get_peptide_distances, pep_train_test_s
 from plot import plot_boxplot, plot_roc_curve, plot_esm_amino_acids_embeddings, plot_2dim_reduction
 from esm_embeddings import get_esm_embeddings, get_esm_model
 from clustering import kmeans_clustering, tsne_dim_reduction
-
+import os
 
 def simple_score(p_train, n_train, p_test, n_test):
     """
@@ -39,8 +39,10 @@ if __name__ == '__main__':
 
     # TODO: play with these parameters
     chosen_embedding_size = 1280  # ESM embedding dim (320-5120)
-    chosen_embedding_layer = 9  # which transformer layer to take
+    chosen_embedding_layer = 33  # which transformer layer to take
     chosen_test_size = 0.25  # train/test split
+    os.makedirs("plots", exist_ok=True)
+
     # Load all the peptide data
     print("Loading peptide data")
     positive_pep, negative_pep, doubt_lables = load_peptide_data()
@@ -56,8 +58,8 @@ if __name__ == '__main__':
     negative_aa_embeddings = get_esm_embeddings(negative_pep[0:1], model_esm, alphabet_esm, batch_converter_esm, device_esm,
                                           embedding_layer=chosen_embedding_layer, sequence_embedding=False)[0]
     print("Plotting heatmaps of the amino acid embedding")
-    plot_esm_amino_acids_embeddings(positive_aa_embeddings, out_file_path="positive_heatmap.png")
-    plot_esm_amino_acids_embeddings(negative_aa_embeddings, out_file_path="negative_heatmap.png")
+    plot_esm_amino_acids_embeddings(positive_aa_embeddings, out_file_path="plots/positive_heatmap.png")
+    plot_esm_amino_acids_embeddings(negative_aa_embeddings, out_file_path="plots/negative_heatmap.png")
 
 
     # Get the ESM-2 sequence embeddings from all the negative and positive peptides
@@ -76,8 +78,8 @@ if __name__ == '__main__':
     coords_2d = tsne_dim_reduction(all_esm_embeddings, dim=2)
 
     print("Plotting 2D dimensionality reduction by true labels and by K-means clustering")
-    plot_2dim_reduction(coords_2d, [["N", "P"][i] for i in all_labels], out_file_path="2d_true_labels.png")
-    plot_2dim_reduction(coords_2d, k_means_labels, out_file_path="2d_k_means.png")
+    plot_2dim_reduction(coords_2d, [["N", "P"][i] for i in all_labels], out_file_path="plots/2d_true_labels.png")
+    plot_2dim_reduction(coords_2d, k_means_labels, out_file_path="plots/2d_k_means.png")
 
 
     # Split the data into train and test sets
@@ -91,17 +93,17 @@ if __name__ == '__main__':
 
     # Plot the results in a boxplot and in a ROC curve
     print("Plotting Baseline results")
-    plot_boxplot({"Positive Test": positive_score, "Negative Test": negative_score}, out_file_path="baseline_boxplot.png")
-    plot_roc_curve([0] * len(negative_score) + [1] * len(positive_score), np.concatenate([negative_score, positive_score]), out_file_path="baseline_roc_curve.png")
+    plot_boxplot({"Positive Test": positive_score, "Negative Test": negative_score}, out_file_path="plots/baseline_boxplot.png")
+    plot_roc_curve([0] * len(negative_score) + [1] * len(positive_score), np.concatenate([negative_score, positive_score]), out_file_path="plots/baseline_roc_curve.png")
 
     # Train a simple neural network
     print("Training a neural network on the training set")
     # TODO: Select parameters for the network
     batch_size = 64
     epochs = 50
-    lr = 1e-2
-    hidden_dim = 256
-    dropout = 0.3
+    lr = 1e-3
+    hidden_dim = 128
+    dropout = 0.2
     # Prepare a Dataloader and create model
     net_dataloader = prepare_loader(positive_train, negative_train, batch_size=batch_size)
     network = SimpleDenseNet(esm_emb_dim=chosen_embedding_size, hidden_dim=hidden_dim, dropout=dropout)
@@ -112,5 +114,5 @@ if __name__ == '__main__':
     negative_score = get_net_scores(trained_net=trained_network, esm_seq_embeddings=negative_test)
 
     print("Plotting Network results")
-    plot_boxplot({"Positive Test": positive_score, "Negative Test": negative_score}, out_file_path="network_boxplot.png")
-    plot_roc_curve([0] * len(negative_score) + [1] * len(positive_score), np.concatenate([negative_score, positive_score]), out_file_path="network_roc_curve.png")
+    plot_boxplot({"Positive Test": positive_score, "Negative Test": negative_score}, out_file_path="plots/network_boxplot.png")
+    plot_roc_curve([0] * len(negative_score) + [1] * len(positive_score), np.concatenate([negative_score, positive_score]), out_file_path="plots/network_roc_curve.png")
