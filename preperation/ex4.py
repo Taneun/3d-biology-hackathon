@@ -39,9 +39,8 @@ if __name__ == '__main__':
 
     # TODO: play with these parameters
     chosen_embedding_size = 1280  # ESM embedding dim (320-5120)
-    chosen_embedding_layer = 33  # which transformer layer to take
+    chosen_embedding_layer = 9  # which transformer layer to take
     chosen_test_size = 0.25  # train/test split
-
     # Load all the peptide data
     print("Loading peptide data")
     positive_pep, negative_pep, doubt_lables = load_peptide_data()
@@ -100,9 +99,9 @@ if __name__ == '__main__':
     # TODO: Select parameters for the network
     batch_size = 64
     epochs = 50
-    lr = 1e-3
-    hidden_dim = 128
-    dropout = 0.2
+    lr = 1e-2
+    hidden_dim = 256
+    dropout = 0.3
     # Prepare a Dataloader and create model
     net_dataloader = prepare_loader(positive_train, negative_train, batch_size=batch_size)
     network = SimpleDenseNet(esm_emb_dim=chosen_embedding_size, hidden_dim=hidden_dim, dropout=dropout)
