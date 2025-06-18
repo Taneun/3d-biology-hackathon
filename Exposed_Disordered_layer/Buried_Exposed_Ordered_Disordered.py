@@ -23,7 +23,11 @@ def parse_dssp(pdb_path, dssp_exe="/cs/labs/dina/noabirman/NES_hackathon/3d-biol
         dssp_data = dssp[key]
 
         ss = dssp_data[1]      # secondary structure (1-letter code)
-        rsa = dssp_data[2]     # relative solvent accessibility (0-1)
+        #rsa = dssp_data[2]     # relative solvent accessibility (0-1)
+        try:
+            rsa = float(dssp_data[2])
+        except ValueError:
+            rsa = 0.0  # fallback: treat as buried if invalid
 
         is_helix.append(ss in helix_codes)
         is_exposed.append(rsa >= rsa_thresh)
@@ -36,5 +40,5 @@ if __name__ == "__main__":
     pdb_path = sys.argv[1]
     is_helix, is_exposed = parse_dssp(pdb_path)
 
-    print("Helix:", is_helix[:10])
-    print("Exposed:", is_exposed[:10])
+    print("Helix:", is_helix)
+    print("Exposed:", is_exposed)
