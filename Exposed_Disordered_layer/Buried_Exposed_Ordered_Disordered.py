@@ -2,33 +2,33 @@ from Bio.PDB import PDBParser, DSSP
 import os
 import sys
 
-def parse_dssp(pdb_file):
-    # Constants
-    dssp_path = "/cs/labs/dina/noabirman/NES_hackathon/3d-biology-hackathon/dssp/mkdssp"
-    helix_codes = {"H", "G", "I"}  # Alpha, 3-10, pi helix
-    exposed_threshold = 0.25  # RSA threshold
+def parse_dssp(pdb_path, dssp_exe="/cs/labs/dina/noabirman/NES_hackathon/3d-biology-hackathon/dssp/mkdssp", rsa_thresh=0.25):
+    from Bio.PDB import PDBParser, DSSP
 
-    # Parse structure
+    helix_codes = {"H", "G", "I"}
+
+    # Load structure
     parser = PDBParser()
-    structure = parser.get_structure("model", pdb_file)
+    structure = parser.get_structure("model", pdb_path)
     model = structure[0]
 
     # Run DSSP
-    dssp = DSSP(model, pdb_file, dssp=dssp_path)
+    dssp = DSSP(model, pdb_path, dssp=dssp_exe)
 
-    # Create boolean lists
+    # Collect booleans
     is_helix = []
     is_exposed = []
 
-    # DSSP returns a dict keyed by (chain_id, res_id)
-    for key in dssp:
-        ss = dssp[key][2]  # Secondary structure code
-        rsa = dssp[key][3]  # Relative Solvent Accessibility (RSA)
+    for res_info in dssp:
+        _, dssp_data = res_info  # unpack (residue_id, dssp_data)
+        ss = dssp_data[1]        # secondary structure (1-letter code)
+        rsa = dssp_data[2]       # relative solvent accessibility
 
         is_helix.append(ss in helix_codes)
-        is_exposed.append(rsa >= exposed_threshold)
+        is_exposed.append(rsa >= rsa_thresh)
 
     return is_helix, is_exposed
+
 
 if __name__ == "__main__":
     pdb_path = sys.argv[1]
