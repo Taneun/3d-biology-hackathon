@@ -5,7 +5,6 @@ import sys
 def parse_dssp(pdb_file):
     # Constants
     dssp_path = "/cs/labs/dina/noabirman/NES_hackathon/3d-biology-hackathon/dssp/mkdssp"
-    pdb_file = "your_model.pdb"
     helix_codes = {"H", "G", "I"}  # Alpha, 3-10, pi helix
     exposed_threshold = 0.25  # RSA threshold
 
