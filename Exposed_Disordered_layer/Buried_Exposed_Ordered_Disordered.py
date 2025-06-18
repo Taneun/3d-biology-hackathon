@@ -3,39 +3,37 @@ import os
 import sys
 
 def parse_dssp(pdb_file):
+    # Constants
     dssp_path = "/cs/labs/dina/noabirman/NES_hackathon/3d-biology-hackathon/dssp/mkdssp"
+    pdb_file = "your_model.pdb"
+    helix_codes = {"H", "G", "I"}  # Alpha, 3-10, pi helix
+    exposed_threshold = 0.25  # RSA threshold
 
     # Parse structure
-    structure = PDBParser(QUIET=True).get_structure("model", pdb_file)
+    parser = PDBParser()
+    structure = parser.get_structure("model", pdb_file)
     model = structure[0]
 
-    # Run DSSP (requires mkdssp installed)
-    #dssp = DSSP(model, pdb_file)
+    # Run DSSP
     dssp = DSSP(model, pdb_file, dssp=dssp_path)
 
-    helix_list = []
-    exposure_list = []
+    # Create boolean lists
+    is_helix = []
+    is_exposed = []
 
-    for key in dssp.keys():
-        aa_info = dssp[key]
+    # DSSP returns a dict keyed by (chain_id, res_id)
+    for key in dssp:
+        ss = dssp[key][2]  # Secondary structure code
+        rsa = dssp[key][3]  # Relative Solvent Accessibility (RSA)
 
-        # Secondary structure code (H, B, E, G, I, T, S, or ' ')
-        ss = aa_info[2]
-        helix = ss in {"H", "G", "I"}  # Alpha, 3-10, Pi helix
+        is_helix.append(ss in helix_codes)
+        is_exposed.append(rsa >= exposed_threshold)
 
-        # Relative solvent accessibility (RSA)
-        rsa = aa_info[3]
-        exposed = rsa > 0.25  # Change threshold as needed
-
-        helix_list.append(helix)
-        exposure_list.append(exposed)
-
-    return helix_list, exposure_list
+    return is_helix, is_exposed
 
 if __name__ == "__main__":
     pdb_path = sys.argv[1]
-    helix_list, exposure_list = parse_dssp(pdb_path)
+    is_helix, is_exposed = parse_dssp(pdb_path)
 
-    # Example output
-    for i, (h, e) in enumerate(zip(helix_list, exposure_list)):
-        print(f"Residue {i+1:4}: Helix={h} | Exposed={e}")
+    print("Helix:", is_helix[:10])
+    print("Exposed:", is_exposed[:10])
