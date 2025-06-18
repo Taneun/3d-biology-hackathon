@@ -40,5 +40,5 @@ if __name__ == "__main__":
     pdb_path = sys.argv[1]
     is_helix, is_exposed = parse_dssp(pdb_path)
 
-    print("Helix:", is_helix[:10])
-    print("Exposed:", is_exposed[:10])
+    print("Helix:", is_helix)
+    print("Exposed:", is_exposed)
