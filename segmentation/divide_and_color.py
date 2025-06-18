@@ -61,11 +61,11 @@ def process_protein_embeddings(
     )
 
     # Change dictionary keys from whole protein identifier to UniProt ID
-    current_keys = list(emb_dict.keys())
-    for k in current_keys:
-        new_k = k.split("|")[1]
-        emb_dict[new_k] = emb_dict[k]
-        del emb_dict[k]
+    # current_keys = list(emb_dict.keys())
+    # for k in current_keys:
+    #     new_k = k.split("|")[3]
+    #     emb_dict[new_k] = emb_dict[k]
+    #     del emb_dict[k]
 
     # Save per-residue embeddings of the proteins (optional)
     if save_whole_emb_to_hdf5:

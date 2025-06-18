@@ -49,13 +49,10 @@ def read_csv_sequences(csv_path):
         for row in csv_reader:
             if row['Sequence'] == '':
                 continue
-            fasta_header = row['Fasta Header']
+            uniprot_id = row['uniprotID']
             sequence = row['Sequence']
 
-            # Extract uniprot ID from header
-            uniprot_id = fasta_header.replace('>', '').strip()
-            # Replace tokens that are mis-interpreted when loading h5
-            uniprot_id = uniprot_id.replace("/", "_").replace(".", "_")
+            uniprot_id = uniprot_id.strip()
 
             # Store the sequence in uppercase with gaps removed
             sequences[uniprot_id] = sequence.upper().replace("-", "")
