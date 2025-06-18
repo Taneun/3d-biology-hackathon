@@ -47,6 +47,8 @@ def read_csv_sequences(csv_path):
         csv_reader = csv.DictReader(csv_file)
 
         for row in csv_reader:
+            if row['Sequence'] == '':
+                continue
             fasta_header = row['Fasta Header']
             sequence = row['Sequence']
 
@@ -58,8 +60,7 @@ def read_csv_sequences(csv_path):
             # Store the sequence in uppercase with gaps removed
             sequences[uniprot_id] = sequence.upper().replace("-", "")
 
-    # return sequences
-    return dict(list(sequences.items())[:3])
+    return sequences
 
 
 def read_fasta( fasta_path ):
