@@ -3,12 +3,15 @@ import os
 import sys
 
 def parse_dssp(pdb_file):
+    dssp_path = "/cs/labs/dina/noabirman/NES_hackathon/3d-biology-hackathon/dssp/mkdssp"
+
     # Parse structure
     structure = PDBParser(QUIET=True).get_structure("model", pdb_file)
     model = structure[0]
 
     # Run DSSP (requires mkdssp installed)
-    dssp = DSSP(model, pdb_file)
+    #dssp = DSSP(model, pdb_file)
+    dssp = DSSP(model, pdb_file, dssp=dssp_path)
 
     helix_list = []
     exposure_list = []
