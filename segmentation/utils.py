@@ -1,6 +1,33 @@
 import numpy as np
 import ruptures as rpt
+import argparse
+import csv
 
+def read_csv_sequences(csv_path):
+    '''
+    Reads in CSV file containing multiple sequences.
+    CSV must have columns "Fasta Header" and "Sequence".
+    Returns dictionary holding multiple sequences with UniProt IDs as keys.
+    '''
+
+    sequences = dict()
+
+    with open(csv_path, 'r') as csv_file:
+        csv_reader = csv.DictReader(csv_file)
+
+        for row in csv_reader:
+            if row['Sequence'] == '':
+                continue
+            uniprot_id = row['uniprotID']
+            sequence = row['Sequence']
+
+            uniprot_id = uniprot_id.strip()
+
+            # Store the sequence in uppercase with gaps removed
+            sequences[uniprot_id] = sequence.upper().replace("-", "")
+
+    return sequences
+    # return dict(list(sequences.items())[:2])
 
 def get_protein_segments(emb_dict, max_bkps_per100aa=3):
     """
@@ -68,4 +95,40 @@ def get_protein_segment_embeddings(emb_dict, protein_segment_boundaries):
 
     return protein_segment_embeddings
 
+
+def print_info(avg_length, max_seq_len, n_long, seq_list):
+    print('########################################')
+    print('Example sequence: {}\n{}'.format(seq_list[0][0], seq_list[0][1]))
+    print('########################################')
+    print('Total number of sequences: {}'.format(len(seq_list)))
+    print("Average sequence length: {}".format(avg_length))
+    print("Number of sequences >{}: {}".format(max_seq_len, n_long))
+
+
+def create_arg_parser():
+    """"Creates and returns the ArgumentParser object."""
+
+    # Instantiate the parser
+    parser = argparse.ArgumentParser(description=(
+            't5_embedder.py creates T5 embeddings for a given text ' +
+            ' file containing sequence(s) in FASTA-format.'))
+
+    # Required positional argument
+    parser.add_argument('-i', '--input', required=True, type=str,
+                        help='A path to a fasta-formatted text file containing protein sequence(s).')
+
+    # Optional positional argument
+    parser.add_argument('-o', '--output', required=True, type=str,
+                        help='A path for saving the created embeddings as NumPy npz file.')
+
+    # Required positional argument
+    parser.add_argument('--model', required=False, type=str,
+                        default=None,
+                        help='A path to a directory holding the checkpoint for a pre-trained model')
+
+    # Optional argument
+    parser.add_argument('--per_protein', type=int,
+                        default=0,
+                        help="Whether to return per-residue embeddings (0: default) or the mean-pooled per-protein representation (1).")
+    return parser
 

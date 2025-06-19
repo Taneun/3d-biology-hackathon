@@ -1,6 +1,6 @@
 import h5py
-import csv
 from protT5_embedder import get_embeddings_from_csv
+from esm_embedder import get_esm_embeddings_from_csv
 from utils import *
 import warnings
 warnings.filterwarnings("ignore")
@@ -17,7 +17,8 @@ def process_protein_embeddings(
         max_residues=4000,
         max_seq_len=4000,
         max_batch=100,
-        max_bkps_per100aa=3
+        max_bkps_per100aa=3,
+        model_type='t5'
 ):
     """
     Process protein sequences to generate embeddings and segment boundaries.
@@ -50,22 +51,28 @@ def process_protein_embeddings(
     if save_seg_emb_to_hdf5 and not seg_emb_path:
         raise ValueError("seg_emb_path is required when save_seg_emb_to_hdf5 is True")
 
-    # Generate ProtT5 embeddings
-    emb_dict = get_embeddings_from_csv(
-        csv_path=csv_path,
-        model_dir=model_dir,
-        per_protein=per_protein,
-        max_residues=max_residues,
-        max_seq_len=max_seq_len,
-        max_batch=max_batch
-    )
-
-    # Change dictionary keys from whole protein identifier to UniProt ID
-    # current_keys = list(emb_dict.keys())
-    # for k in current_keys:
-    #     new_k = k.split("|")[3]
-    #     emb_dict[new_k] = emb_dict[k]
-    #     del emb_dict[k]
+    if model_type == 't5':
+        # Generate ProtT5 embeddings
+        emb_dict = get_embeddings_from_csv(
+            csv_path=csv_path,
+            model_dir=model_dir,
+            per_protein=per_protein,
+            max_residues=max_residues,
+            max_seq_len=max_seq_len,
+            max_batch=max_batch
+        )
+    elif model_type == 'esm':
+        # Generate ESM embeddings
+        emb_dict = get_esm_embeddings_from_csv(
+            csv_path=csv_path,
+            embedding_size=1280,  # ESM-2 embedding size
+            per_protein=per_protein,
+            max_residues=max_residues,
+            max_seq_len=max_seq_len,
+            max_batch=max_batch,
+            print_seq_info=True,
+            embedding_layer=33  # ESM-2 embedding layer
+        )
 
     # Save per-residue embeddings of the proteins (optional)
     if save_whole_emb_to_hdf5:
@@ -96,11 +103,21 @@ def process_protein_embeddings(
 # Example usage:
 if __name__ == "__main__":
     # Basic usage with original parameters
-    emb_dict, protein_segments = process_protein_embeddings(
+    # emb_dict, protein_segments = process_protein_embeddings(
+    #     csv_path="NESDB_combined_database.csv",
+    #     seg_bounds_path="NESDB_combined_segments.tsv",
+    #     save_whole_emb_to_hdf5=False,
+    #     whole_emb_path="NESDB_combined_whole_emb.hdf5",
+    #     save_seg_emb_to_hdf5=False,
+    #     seg_emb_path="NESDB_combined_seg_emb.hdf5"
+    # )
+
+    esm_emb_dict, esm_protein_segments = process_protein_embeddings(
         csv_path="NESDB_combined_database.csv",
-        seg_bounds_path="NESDB_combined_segments.tsv",
+        seg_bounds_path="ESM_NESDB_combined_segments.tsv",
         save_whole_emb_to_hdf5=False,
         whole_emb_path="NESDB_combined_whole_emb.hdf5",
         save_seg_emb_to_hdf5=False,
-        seg_emb_path="NESDB_combined_seg_emb.hdf5"
+        seg_emb_path="NESDB_combined_seg_emb.hdf5",
+        model_type='esm'
     )
