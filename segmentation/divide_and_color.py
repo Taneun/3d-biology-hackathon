@@ -99,25 +99,26 @@ def process_protein_embeddings(
 
     return emb_dict, protein_segments
 
-
-# Example usage:
 if __name__ == "__main__":
-    # Basic usage with original parameters
-    # emb_dict, protein_segments = process_protein_embeddings(
-    #     csv_path="T5_NESDB_combined_database.csv",
-    #     seg_bounds_path="NESDB_combined_segments.tsv",
-    #     save_whole_emb_to_hdf5=False,
-    #     whole_emb_path="NESDB_combined_whole_emb.hdf5",
-    #     save_seg_emb_to_hdf5=False,
-    #     seg_emb_path="NESDB_combined_seg_emb.hdf5"
-    # )
-
-    esm_emb_dict, esm_protein_segments = process_protein_embeddings(
-        csv_path="NESDB_combined_database.csv",
-        seg_bounds_path="ESM_NESDB_combined_segments.tsv",
+    import os
+    if not os.path.exists("data"):
+        os.makedirs("data")
+    # Process ProtT5 embeddings
+    emb_dict, protein_segments = process_protein_embeddings(
+        csv_path="data/NESDB_combined_database.csv",
+        seg_bounds_path="data/T5_NESDB_combined_segments.tsv",
         save_whole_emb_to_hdf5=False,
-        whole_emb_path="NESDB_combined_whole_emb.hdf5",
+        whole_emb_path="data/T5_NESDB_combined_whole_emb.hdf5",
         save_seg_emb_to_hdf5=False,
-        seg_emb_path="NESDB_combined_seg_emb.hdf5",
+        seg_emb_path="data/T5_NESDB_combined_seg_emb.hdf5"
+    )
+    # Process ESM embeddings
+    esm_emb_dict, esm_protein_segments = process_protein_embeddings(
+        csv_path="data/NESDB_combined_database.csv",
+        seg_bounds_path="data/ESM_NESDB_combined_segments.tsv",
+        save_whole_emb_to_hdf5=False,
+        whole_emb_path="data/ESM_NESDB_combined_whole_emb.hdf5",
+        save_seg_emb_to_hdf5=False,
+        seg_emb_path="data/ESM_NESDB_combined_seg_emb.hdf5",
         model_type='esm'
     )

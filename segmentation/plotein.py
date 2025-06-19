@@ -160,31 +160,22 @@ def plot_protein_annotation(uniprot_id, protein_name, segments, nes_info, save_p
 
             ax.add_patch(rect)
 
-        # Add segment labels
-        # segment_center = (start + end) / 2
-        # ax.text(segment_center, bar_height / 2 + 0.1, f'Seg_{i + 1}',
-        #         ha='center', va='bottom', fontsize=8, rotation=0)
-
     # Add NES motif annotations
     labled = True
     if nes_info:
-        for info in nes_info:
+        for i, info in enumerate(reversed(nes_info)):
             nes_start = info['nes_start']
             nes_end = info['nes_end']
 
             # Draw NES motif as a thick line
-            ax.plot([nes_start, nes_end], [-0.3, -0.3], linestyle='-', color='#e64b35', linewidth=4, alpha=0.8,
+            height = -0.2 - (i * 0.05)  # Adjust height for multiple NES motifs
+            ax.plot([nes_start, nes_end], [height, height], linestyle='-', color='#e64b35', linewidth=3,
                     label='Annotated NES motif' if labled else "")
             labled = False
 
-            # Add NES label
-            # nes_center = (nes_start + nes_end) / 2
-            # ax.text(nes_center, -0.8, f'NES_{nes_id}', ha='center', va='top',
-            #         fontsize=8, color='red', weight='bold')
-
     # Formatting
     ax.set_xlim(-protein_length * 0.05, protein_length * 1.05)
-    ax.set_ylim(-1.2, 0.8)
+    ax.set_ylim(-0.5, 0.8)
     ax.set_xlabel('Amino Acid Position')
     ax.set_ylabel('')
     protein_name = protein_name.split(' ')[0]  # Use only the first part of the protein name
@@ -194,11 +185,7 @@ def plot_protein_annotation(uniprot_id, protein_name, segments, nes_info, save_p
                 transform=ax.transAxes, ha='center', fontsize=10, color='#e64b35')
     ax.set_title(f'{model_name} Embedding Based Protein Annotation\n{protein_name} (Length: {protein_length} aa)')
     ax.grid(True, alpha=0.3)
-
-    # Remove y-axis ticks
     ax.set_yticks([])
-
-    # Add legend
     ax.legend(loc='upper right')
     plt.tight_layout()
 
@@ -240,6 +227,7 @@ def create_all_protein_plots(segmentation_data, nes_data, from_list=None, save_d
         prot_name = nes_info[0]['protein_name']
         plot_protein_annotation(uniprot_id, prot_name, segments, nes_info, save_path, model_name)
 
+
 def calculate_precent_of_match(segmentation_data, nes_data, top=10):
     """
     Calculate the percentage of NES motif matching for each protein.
@@ -247,10 +235,10 @@ def calculate_precent_of_match(segmentation_data, nes_data, top=10):
     Args:
         segmentation_data (dict): Protein segmentation data
         nes_data (pandas.DataFrame): NES motif data
-        save_dir (str, optional): Directory to save plots
+        top (int): Number of top matches to return
     """
     best_matches = []
-    precent_of_match = dict()
+    match_data = {}
     # Find best NES segments
     best_nes_segments = find_best_nes_segments(segmentation_data, nes_data)
 
@@ -259,19 +247,30 @@ def calculate_precent_of_match(segmentation_data, nes_data, top=10):
         if len(nes_info) < 1:
             continue
         total_overlap = sum(info['overlap_pct'] for info in nes_info) / len(nes_info)
-        precent_of_match[uniprot_id] = total_overlap
-    # sort the dictionary by values in descending order
-    sorted_precent_of_match = dict(sorted(precent_of_match.items(), key=lambda item: item[1], reverse=True))
-    # print top 10 proteins with highest NES motif matching percentage
-    print(f"Top {top} proteins with highest NES motif matching percentage:")
-    for i, (uniprot_id, percent) in enumerate(sorted_precent_of_match.items()):
+        match_data[uniprot_id] = {
+            'percent': total_overlap,
+            'nes_count': len(nes_info)
+        }
+
+    # Sort by percentage first, then by NES count
+    sorted_proteins = sorted(
+        match_data.items(),
+        key=lambda item: (item[1]['nes_count']),
+        reverse=True
+    )
+
+    # Print top proteins with highest NES motif matching percentage
+    print(f"Top {top} proteins with highest NES motif matching count:")
+    for i, (uniprot_id, data) in enumerate(sorted_proteins):
         if i >= top:
             break
-        print(f"{i + 1}. {uniprot_id}: {percent:.2f}%")
+        print(f"{i + 1}. {uniprot_id}: {data['percent']:.2f}% (NES count: {data['nes_count']})")
         best_matches.append(uniprot_id)
-    # print average percentage of NES motif matching
-    average_percent = sum(sorted_precent_of_match.values()) / len(sorted_precent_of_match)
+
+    # Calculate and print average percentage of NES motif matching
+    average_percent = sum(data['percent'] for _, data in match_data.items()) / len(match_data)
     print(f"Average percentage of NES motif matching: {average_percent:.2f}%")
+
     return best_matches
 
 def calculate_best_segment_length_distribution(segmentation_data, nes_data, save_dir=None, model_name=None):
@@ -293,7 +292,6 @@ def calculate_best_segment_length_distribution(segmentation_data, nes_data, save
 
     # Find best NES segments
     best_nes_segments = find_best_nes_segments(segmentation_data, nes_data)
-
     for uniprot_id, segments in segmentation_data.items():
         nes_info = best_nes_segments.get(uniprot_id, [])
         # add all the lengths of segments
@@ -315,7 +313,7 @@ def calculate_best_segment_length_distribution(segmentation_data, nes_data, save
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     if save_dir:
-        plt.savefig(f"{save_dir}/segment_length_distribution.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{save_dir}/{model_name}_segment_length_distribution.png", dpi=300, bbox_inches='tight')
         plt.close()
     else:
         plt.show()
@@ -325,11 +323,11 @@ def main():
     Main function to run the protein annotation plotting pipeline.
     """
     # File paths - modify these according to your file locations
-    t5_tsv_file = "T5_NESDB_combined_segments.tsv"
-    esm_tsv_file = "ESM_NESDB_combined_segments.tsv"
+    t5_tsv_file = "data/T5_NESDB_combined_segments.tsv"
+    esm_tsv_file = "data/ESM_NESDB_combined_segments.tsv"
     t5_model_name = "ProtT5"
     esm_model_name = "ESM-2"
-    csv_file = "NESDB_combined_database.csv"
+    csv_file = "data/NESDB_combined_database.csv"
     save_directory = "protein_plots"
     import os
     if not os.path.exists(save_directory):
@@ -338,17 +336,21 @@ def main():
     esm_segmentation_data = load_segmentation_data(esm_tsv_file)
     nes_data = load_nes_data(csv_file)
 
+    t5_best_nes = calculate_precent_of_match(t5_segmentation_data, nes_data)
+    esm_best_nes = calculate_precent_of_match(esm_segmentation_data, nes_data)
+    # if there are proteins that are in both lists
+    common_proteins = set(t5_best_nes) & set(esm_best_nes)
+    chosen = ["Q06219", "O00255"]
+
     print("############# ProT5 data analysis #############")
     calculate_best_segment_length_distribution(t5_segmentation_data, nes_data, save_dir=save_directory, model_name=t5_model_name)
-    best_nes = calculate_precent_of_match(t5_segmentation_data, nes_data)
     # take top 10 proteins with highest NES motif matching percentage
-    create_all_protein_plots(t5_segmentation_data, nes_data, from_list=["P33981"], save_dir=save_directory, model_name=t5_model_name)
+    create_all_protein_plots(t5_segmentation_data, nes_data, from_list=chosen, save_dir=save_directory, model_name=t5_model_name)
 
     print("############# ESM-2 data analysis #############")
     calculate_best_segment_length_distribution(esm_segmentation_data, nes_data, save_dir=save_directory, model_name=esm_model_name)
-    best_nes = calculate_precent_of_match(esm_segmentation_data, nes_data)
     # take top 10 proteins with highest NES motif matching percentage
-    create_all_protein_plots(esm_segmentation_data, nes_data, from_list=["P33981"], save_dir=save_directory, model_name=esm_model_name)
+    create_all_protein_plots(esm_segmentation_data, nes_data, from_list=chosen, save_dir=save_directory, model_name=esm_model_name)
 
 
 if __name__ == "__main__":
