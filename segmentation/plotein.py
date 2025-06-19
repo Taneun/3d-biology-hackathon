@@ -143,6 +143,7 @@ def plot_protein_annotation(uniprot_id, protein_name, segments, nes_info, save_p
 
     # Draw segments
     bar_height = 0.3
+    label = True
     for i, (start, end) in enumerate(segments):
         # Highlight NES-containing segments
         if i in nes_segment_indices:
@@ -156,8 +157,8 @@ def plot_protein_annotation(uniprot_id, protein_name, segments, nes_info, save_p
             # Draw regular segment
             rect = patches.Rectangle((start, -bar_height / 2), end - start, bar_height,
                                  linewidth=1, edgecolor='black', facecolor='#4dbbd5', alpha=0.6,
-                                 label='Embedding segment' if i == 0 else "")
-
+                                 label='Embedding segment' if label else "")
+            label = False
             ax.add_patch(rect)
 
     # Add NES motif annotations

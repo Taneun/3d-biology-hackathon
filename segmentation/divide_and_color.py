@@ -104,30 +104,30 @@ def main():
     """
     Main function to run the protein annotation plotting pipeline.
     """
-    import os
-    if not os.path.exists("data"):
-        os.makedirs("data")
-    # Process ProtT5 embeddings
-    print("############# ProT5 #############")
-    emb_dict, protein_segments = process_protein_embeddings(
-        csv_path="data/NESDB_combined_database.csv",
-        seg_bounds_path="data/T5_NESDB_combined_segments.tsv",
-        save_whole_emb_to_hdf5=False,
-        whole_emb_path="data/T5_NESDB_combined_whole_emb.hdf5",
-        save_seg_emb_to_hdf5=False,
-        seg_emb_path="data/T5_NESDB_combined_seg_emb.hdf5"
-    )
-    # Process ESM embeddings
-    print("############# ESM-2 #############")
-    esm_emb_dict, esm_protein_segments = process_protein_embeddings(
-        csv_path="data/NESDB_combined_database.csv",
-        seg_bounds_path="data/ESM_NESDB_combined_segments.tsv",
-        save_whole_emb_to_hdf5=False,
-        whole_emb_path="data/ESM_NESDB_combined_whole_emb.hdf5",
-        save_seg_emb_to_hdf5=False,
-        seg_emb_path="data/ESM_NESDB_combined_seg_emb.hdf5",
-        model_type='esm'
-    )
+    # import os
+    # if not os.path.exists("data"):
+    #     os.makedirs("data")
+    # # Process ProtT5 embeddings
+    # print("############# ProT5 #############")
+    # emb_dict, protein_segments = process_protein_embeddings(
+    #     csv_path="data/NESDB_combined_database.csv",
+    #     seg_bounds_path="data/T5_NESDB_combined_segments.tsv",
+    #     save_whole_emb_to_hdf5=False,
+    #     whole_emb_path="data/T5_NESDB_combined_whole_emb.hdf5",
+    #     save_seg_emb_to_hdf5=False,
+    #     seg_emb_path="data/T5_NESDB_combined_seg_emb.hdf5"
+    # )
+    # # Process ESM embeddings
+    # print("############# ESM-2 #############")
+    # esm_emb_dict, esm_protein_segments = process_protein_embeddings(
+    #     csv_path="data/NESDB_combined_database.csv",
+    #     seg_bounds_path="data/ESM_NESDB_combined_segments.tsv",
+    #     save_whole_emb_to_hdf5=False,
+    #     whole_emb_path="data/ESM_NESDB_combined_whole_emb.hdf5",
+    #     save_seg_emb_to_hdf5=False,
+    #     seg_emb_path="data/ESM_NESDB_combined_seg_emb.hdf5",
+    #     model_type='esm'
+    # )
     # File paths - modify these according to your file locations
     t5_tsv_file = "data/T5_NESDB_combined_segments.tsv"
     esm_tsv_file = "data/ESM_NESDB_combined_segments.tsv"
