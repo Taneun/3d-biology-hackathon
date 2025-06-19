@@ -8,14 +8,12 @@ Created on Wed Sep 23 18:33:22 2020
 
 
 """
-
-import argparse
 import time
 from pathlib import Path
-import csv
 import torch
 from transformers import T5EncoderModel, T5Tokenizer
 from tqdm import tqdm
+from utils import read_csv_sequences, print_info
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 print("Using device: {}".format(device))
@@ -33,31 +31,6 @@ def get_T5_model(model_dir, transformer_link = "Rostlab/prot_t5_xl_half_uniref50
     model = model.eval()
     vocab = T5Tokenizer.from_pretrained(transformer_link, do_lower_case=False )
     return model, vocab
-
-def read_csv_sequences(csv_path):
-    '''
-    Reads in CSV file containing multiple sequences.
-    CSV must have columns "Fasta Header" and "Sequence".
-    Returns dictionary holding multiple sequences with UniProt IDs as keys.
-    '''
-
-    sequences = dict()
-
-    with open(csv_path, 'r') as csv_file:
-        csv_reader = csv.DictReader(csv_file)
-
-        for row in csv_reader:
-            if row['Sequence'] == '':
-                continue
-            uniprot_id = row['uniprotID']
-            sequence = row['Sequence']
-
-            uniprot_id = uniprot_id.strip()
-
-            # Store the sequence in uppercase with gaps removed
-            sequences[uniprot_id] = sequence.upper().replace("-", "")
-
-    return sequences
 
 
 def read_fasta( fasta_path ):
@@ -118,14 +91,14 @@ def read_fasta_chunks( fasta_path, chunk_size=1000, chunk_iteration=0 ):
     return sequences
 
 
-def get_embeddings(seq_path, 
-                   model_dir, 
+def get_embeddings_from_fasta(seq_path,
+                   model_dir,
                    per_protein, # whether to derive per-protein (mean-pooled) embeddings
                    max_residues=4000, # number of cumulative residues per batch
                    max_seq_len=4000, # max length after which we switch to single-sequence processing to avoid OOM
                    max_batch=100 # max number of sequences per single batch
                 ):
-    
+
     seq_dict = dict()
     emb_dict = dict()
 
@@ -155,8 +128,8 @@ def get_embeddings(seq_path,
         batch.append((pdb_id,seq,seq_len))
 
         # count residues in current batch and add the last sequence length to
-        # avoid that batches with (n_res_batch > max_residues) get processed 
-        n_res_batch = sum([ s_len for  _, _, s_len in batch ]) + seq_len 
+        # avoid that batches with (n_res_batch > max_residues) get processed
+        n_res_batch = sum([ s_len for  _, _, s_len in batch ]) + seq_len
         if len(batch) >= max_batch or n_res_batch>=max_residues or seq_idx==len(seq_dict) or seq_len>max_seq_len:
             pdb_ids, seqs, seq_lens = zip(*batch)
             batch = list()
@@ -164,7 +137,7 @@ def get_embeddings(seq_path,
             token_encoding = vocab.batch_encode_plus(seqs, add_special_tokens=True, padding="longest")
             input_ids      = torch.tensor(token_encoding['input_ids']).to(device)
             attention_mask = torch.tensor(token_encoding['attention_mask']).to(device)
-            
+
             try:
                 with torch.no_grad():
                     embedding_repr = model(input_ids, attention_mask=attention_mask)
@@ -172,17 +145,17 @@ def get_embeddings(seq_path,
                 print("RuntimeError during embedding for {} (L={}). Try lowering batch size. ".format(pdb_id, seq_len) +
                       "If single sequence processing does not work, you need more vRAM to process your protein.")
                 continue
-            
+
             # batch-size x seq_len x embedding_dim
             # extra token is added at the end of the seq
             for batch_idx, identifier in enumerate(pdb_ids):
                 s_len = seq_lens[batch_idx]
                 # slice-off padded/special tokens
                 emb = embedding_repr.last_hidden_state[batch_idx,:s_len]
-                
+
                 if per_protein:
                     emb = emb.mean(dim=0)
-            
+
                 if len(emb_dict) == 0:
                     print("Embedded protein {} with length {} to emb. of shape: {}".format(
                         identifier, s_len, emb.shape))
@@ -192,7 +165,7 @@ def get_embeddings(seq_path,
     end = time.time()
 
     print('\n############# STATS #############')
-    print('Total time: {:.2f}[s]; time/prot: {:.4f}[s]; avg. len= {:.2f}'.format( 
+    print('Total time: {:.2f}[s]; time/prot: {:.4f}[s]; avg. len= {:.2f}'.format(
             end-start, (end-start)/len(emb_dict), avg_length))
     return emb_dict
 
@@ -267,43 +240,6 @@ def get_embeddings_from_csv(csv_path,
     print('Total time: {:.2f}[s]; time/prot: {:.4f}[s]; avg. len= {:.2f}'.format(
         end - start, (end - start) / len(emb_dict), avg_length))
     return emb_dict
-
-
-def print_info(avg_length, max_seq_len, n_long, seq_list):
-    print('########################################')
-    print('Example sequence: {}\n{}'.format(seq_list[0][0], seq_list[0][1]))
-    print('########################################')
-    print('Total number of sequences: {}'.format(len(seq_list)))
-    print("Average sequence length: {}".format(avg_length))
-    print("Number of sequences >{}: {}".format(max_seq_len, n_long))
-
-
-def create_arg_parser():
-    """"Creates and returns the ArgumentParser object."""
-
-    # Instantiate the parser
-    parser = argparse.ArgumentParser(description=( 
-            't5_embedder.py creates T5 embeddings for a given text '+
-            ' file containing sequence(s) in FASTA-format.') )
-    
-    # Required positional argument
-    parser.add_argument( '-i', '--input', required=True, type=str,
-                    help='A path to a fasta-formatted text file containing protein sequence(s).')
-
-    # Optional positional argument
-    parser.add_argument( '-o', '--output', required=True, type=str, 
-                    help='A path for saving the created embeddings as NumPy npz file.')
-
-    # Required positional argument
-    parser.add_argument('--model', required=False, type=str,
-                    default=None,
-                    help='A path to a directory holding the checkpoint for a pre-trained model' )
-
-    # Optional argument
-    parser.add_argument('--per_protein', type=int, 
-                    default=0,
-                    help="Whether to return per-residue embeddings (0: default) or the mean-pooled per-protein representation (1).")
-    return parser
 
 
 
