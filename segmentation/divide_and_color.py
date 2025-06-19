@@ -2,6 +2,7 @@ import h5py
 from protT5_embedder import get_embeddings_from_csv
 from esm_embedder import get_esm_embeddings_from_csv
 from utils import *
+from plotein import *
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -99,11 +100,15 @@ def process_protein_embeddings(
 
     return emb_dict, protein_segments
 
-if __name__ == "__main__":
+def main():
+    """
+    Main function to run the protein annotation plotting pipeline.
+    """
     import os
     if not os.path.exists("data"):
         os.makedirs("data")
     # Process ProtT5 embeddings
+    print("############# ProT5 #############")
     emb_dict, protein_segments = process_protein_embeddings(
         csv_path="data/NESDB_combined_database.csv",
         seg_bounds_path="data/T5_NESDB_combined_segments.tsv",
@@ -113,6 +118,7 @@ if __name__ == "__main__":
         seg_emb_path="data/T5_NESDB_combined_seg_emb.hdf5"
     )
     # Process ESM embeddings
+    print("############# ESM-2 #############")
     esm_emb_dict, esm_protein_segments = process_protein_embeddings(
         csv_path="data/NESDB_combined_database.csv",
         seg_bounds_path="data/ESM_NESDB_combined_segments.tsv",
@@ -122,3 +128,35 @@ if __name__ == "__main__":
         seg_emb_path="data/ESM_NESDB_combined_seg_emb.hdf5",
         model_type='esm'
     )
+    # File paths - modify these according to your file locations
+    t5_tsv_file = "data/T5_NESDB_combined_segments.tsv"
+    esm_tsv_file = "data/ESM_NESDB_combined_segments.tsv"
+    t5_model_name = "ProtT5"
+    esm_model_name = "ESM-2"
+    csv_file = "data/NESDB_combined_database.csv"
+    save_directory = "protein_plots"
+    import os
+    if not os.path.exists(save_directory):
+        os.makedirs(save_directory)
+    t5_segmentation_data = load_segmentation_data(t5_tsv_file)
+    esm_segmentation_data = load_segmentation_data(esm_tsv_file)
+    nes_data = load_nes_data(csv_file)
+
+    t5_best_nes = calculate_precent_of_match(t5_segmentation_data, nes_data)
+    esm_best_nes = calculate_precent_of_match(esm_segmentation_data, nes_data)
+    # if there are proteins that are in both lists
+    common_proteins = set(t5_best_nes) & set(esm_best_nes)
+    chosen = ["Q06219", "O00255"]
+
+    print("############# ProT5 data analysis #############")
+    calculate_best_segment_length_distribution(t5_segmentation_data, nes_data, save_dir=save_directory, model_name=t5_model_name)
+    # take top 10 proteins with highest NES motif matching percentage
+    create_all_protein_plots(t5_segmentation_data, nes_data, from_list=chosen, save_dir=save_directory, model_name=t5_model_name)
+
+    print("############# ESM-2 data analysis #############")
+    calculate_best_segment_length_distribution(esm_segmentation_data, nes_data, save_dir=save_directory, model_name=esm_model_name)
+    # take top 10 proteins with highest NES motif matching percentage
+    create_all_protein_plots(esm_segmentation_data, nes_data, from_list=chosen, save_dir=save_directory, model_name=esm_model_name)
+
+if __name__ == "__main__":
+    main()
