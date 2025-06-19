@@ -1,4 +1,3 @@
-````markdown
 # ProtSeg: Protein Embedding & NES Motif Analysis Pipeline
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/username/protseg/ci.yml?branch=main)](https://github.com/username/protseg/actions)  
@@ -49,7 +48,7 @@ pip install -r requirements.txt
 
 # Example: full pipeline on NESDB data
 python divide_and_color.py
-````
+
 
 ---
 
