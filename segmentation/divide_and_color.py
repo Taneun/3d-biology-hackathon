@@ -104,7 +104,7 @@ def process_protein_embeddings(
 if __name__ == "__main__":
     # Basic usage with original parameters
     # emb_dict, protein_segments = process_protein_embeddings(
-    #     csv_path="NESDB_combined_database.csv",
+    #     csv_path="T5_NESDB_combined_database.csv",
     #     seg_bounds_path="NESDB_combined_segments.tsv",
     #     save_whole_emb_to_hdf5=False,
     #     whole_emb_path="NESDB_combined_whole_emb.hdf5",

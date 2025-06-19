@@ -4,7 +4,7 @@ import numpy as np
 import ast
 from collections import defaultdict
 import matplotlib.patches as patches
-
+import seaborn as sns
 
 def load_segmentation_data(tsv_file):
     """
@@ -67,31 +67,6 @@ def calculate_overlap_percentage(segment_start, segment_end, nes_start, nes_end)
     return (overlap_length / nes_length) * 100 if nes_length > 0 else 0.0
 
 
-def calculate_percentage_of_segment(segment_start, segment_end, nes_start, nes_end):
-    """
-    Calculate the percentage of segment which is NES motif
-
-    Args:
-        segment_start (int): Start position of segment
-        segment_end (int): End position of segment
-        nes_start (int): Start position of NES motif
-        nes_end (int): End position of NES motif
-
-    Returns:
-        float: Percentage of the segment which is NES motif (0-100)
-    """
-    overlap_start = max(segment_start, nes_start)
-    overlap_end = min(segment_end, nes_end)
-
-    if overlap_start >= overlap_end:
-        return 0.0
-
-    overlap_length = overlap_end - overlap_start
-    segment_length = segment_end - segment_start
-
-    return (overlap_length / segment_length) * 100 if segment_length > 0 else 0.0
-
-
 def find_best_nes_segments(segmentation_data, nes_data):
     """
     Find the segment with the best NES overlap for each protein.
@@ -117,7 +92,7 @@ def find_best_nes_segments(segmentation_data, nes_data):
 
         segments = segmentation_data[uniprot_id]
         best_overlap = 0
-        best_overlap_precent_of_segment = 0
+        best_segment_length = 0
         best_segment_idx = -1
 
         for i, segment in enumerate(segments):
@@ -126,25 +101,24 @@ def find_best_nes_segments(segmentation_data, nes_data):
 
             if overlap_pct > best_overlap:
                 best_overlap = overlap_pct
-                best_overlap_precent_of_segment = calculate_percentage_of_segment(segment_start, segment_end, nes_start,
-                                                                                  nes_end)
+                best_segment_length = segment_end - segment_start
                 best_segment_idx = i
 
         if best_segment_idx >= 0 and best_overlap > 0:
             best_nes_segments[uniprot_id].append({
                 'segment_idx': best_segment_idx,
                 'overlap_pct': best_overlap,
-                'overlap_pct_of_segment': best_overlap_precent_of_segment,
                 'nes_start': nes_start,
                 'nes_end': nes_end,
                 'nes_id': nes_id,
+                'best_segment_length': best_segment_length,
                 'protein_name': protein_name
             })
 
     return best_nes_segments
 
 
-def plot_protein_annotation(uniprot_id, protein_name, segments, nes_info, save_path=None):
+def plot_protein_annotation(uniprot_id, protein_name, segments, nes_info, save_path=None, model_name=None):
     """
     Create a linear annotation plot for a single protein.
 
@@ -174,14 +148,14 @@ def plot_protein_annotation(uniprot_id, protein_name, segments, nes_info, save_p
         if i in nes_segment_indices:
             # Draw highlighted segment with border
             nes_rect = patches.Rectangle((start, -bar_height / 2), end - start, bar_height,
-                                         linewidth=2, edgecolor='red', facecolor='bisque',
+                                         linewidth=1, edgecolor='black', facecolor='#f39b7f',
                                          alpha=0.8,
-                                         label='NES-containing segment' if i == min(nes_segment_indices) else "")
+                                         label='Best matching segment' if i == min(nes_segment_indices) else "")
             ax.add_patch(nes_rect)
         else:
             # Draw regular segment
             rect = patches.Rectangle((start, -bar_height / 2), end - start, bar_height,
-                                 linewidth=1, edgecolor='black', facecolor='lightsteelblue', alpha=0.6,
+                                 linewidth=1, edgecolor='black', facecolor='#4dbbd5', alpha=0.6,
                                  label='Embedding segment' if i == 0 else "")
 
             ax.add_patch(rect)
@@ -197,11 +171,10 @@ def plot_protein_annotation(uniprot_id, protein_name, segments, nes_info, save_p
         for info in nes_info:
             nes_start = info['nes_start']
             nes_end = info['nes_end']
-            nes_id = info['nes_id']
 
             # Draw NES motif as a thick line
-            ax.plot([nes_start, nes_end], [-0.6, -0.6], 'r-', linewidth=4, alpha=0.8,
-                    label='NES motif' if labled else "")
+            ax.plot([nes_start, nes_end], [-0.3, -0.3], linestyle='-', color='#e64b35', linewidth=4, alpha=0.8,
+                    label='Annotated NES motif' if labled else "")
             labled = False
 
             # Add NES label
@@ -215,11 +188,11 @@ def plot_protein_annotation(uniprot_id, protein_name, segments, nes_info, save_p
     ax.set_xlabel('Amino Acid Position')
     ax.set_ylabel('')
     protein_name = protein_name.split(' ')[0]  # Use only the first part of the protein name
-    matching_precent = sum(info['overlap_pct_of_segment'] for info in nes_info) / len(nes_info) if nes_info else 0
+    matching_precent = sum(info['overlap_pct'] for info in nes_info) / len(nes_info) if nes_info else 0
     if matching_precent > 0:
         ax.text(0.5, 0.9, f'NES Motif Matching: {matching_precent:.1f}%',
-                transform=ax.transAxes, ha='center', fontsize=10, color='darkred')
-    ax.set_title(f'Protein Annotation: {protein_name} (Length: {protein_length} aa)')
+                transform=ax.transAxes, ha='center', fontsize=10, color='#e64b35')
+    ax.set_title(f'{model_name} Embedding Based Protein Annotation\n{protein_name} (Length: {protein_length} aa)')
     ax.grid(True, alpha=0.3)
 
     # Remove y-axis ticks
@@ -227,17 +200,16 @@ def plot_protein_annotation(uniprot_id, protein_name, segments, nes_info, save_p
 
     # Add legend
     ax.legend(loc='upper right')
-
     plt.tight_layout()
 
     if save_path:
-        plt.savefig(f"{save_path}/{uniprot_id}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"{save_path}/{model_name}_{uniprot_id}.png", dpi=300, bbox_inches='tight')
         plt.close()
     else:
         plt.show()
 
 
-def create_all_protein_plots(segmentation_data, nes_data, from_list=None, save_dir=None):
+def create_all_protein_plots(segmentation_data, nes_data, from_list=None, save_dir=None, model_name=None):
     """
     Create annotation plots for all proteins.
 
@@ -266,7 +238,7 @@ def create_all_protein_plots(segmentation_data, nes_data, from_list=None, save_d
             print(f"  No NES motif(s) found")
         save_path = save_dir if save_dir else None
         prot_name = nes_info[0]['protein_name']
-        plot_protein_annotation(uniprot_id, prot_name, segments, nes_info, save_path)
+        plot_protein_annotation(uniprot_id, prot_name, segments, nes_info, save_path, model_name)
 
 def calculate_precent_of_match(segmentation_data, nes_data, top=10):
     """
@@ -284,9 +256,9 @@ def calculate_precent_of_match(segmentation_data, nes_data, top=10):
 
     for uniprot_id, segments in segmentation_data.items():
         nes_info = best_nes_segments.get(uniprot_id, [])
-        if len(nes_info) <= 1:
+        if len(nes_info) < 1:
             continue
-        total_overlap = sum(info['overlap_pct_of_segment'] for info in nes_info) / len(nes_info)
+        total_overlap = sum(info['overlap_pct'] for info in nes_info) / len(nes_info)
         precent_of_match[uniprot_id] = total_overlap
     # sort the dictionary by values in descending order
     sorted_precent_of_match = dict(sorted(precent_of_match.items(), key=lambda item: item[1], reverse=True))
@@ -302,29 +274,81 @@ def calculate_precent_of_match(segmentation_data, nes_data, top=10):
     print(f"Average percentage of NES motif matching: {average_percent:.2f}%")
     return best_matches
 
+def calculate_best_segment_length_distribution(segmentation_data, nes_data, save_dir=None, model_name=None):
+    """
+    Calculate the best segment length distribution for all proteins.
+
+    Args:
+        segmentation_data (dict): Protein segmentation data
+        nes_data (pandas.DataFrame): NES motif data
+        save_dir (str, optional): Directory to save plots
+    """
+    all_chosen_segments = []
+    all_segments_lengths = []
+
+    # Calculate the lengths of all segments
+    for segments in segmentation_data.values():
+        for start, end in segments:
+            all_segments_lengths.append(end - start)
+
+    # Find best NES segments
+    best_nes_segments = find_best_nes_segments(segmentation_data, nes_data)
+
+    for uniprot_id, segments in segmentation_data.items():
+        nes_info = best_nes_segments.get(uniprot_id, [])
+        # add all the lengths of segments
+        for info in nes_info:
+            all_chosen_segments.append(info['best_segment_length'])
+    # plot the distribution of segment lengths kde style, using seaborn
+    sns.set_theme(style="whitegrid")
+    plt.figure(figsize=(10, 6))
+    sns.histplot(all_chosen_segments, element="step", color='#f39b7f', alpha=0.3, label=f'Best Segment Lengths (n={len(all_chosen_segments)})',
+                 kde=True, stat="density",)
+    sns.histplot(all_segments_lengths, element="step", color='#4dbbd5', alpha=0.3, label=f'All Segments Lengths (n={len(all_segments_lengths)})',
+                 kde=True, stat="density",)
+    plt.legend()
+    plt.title(f'Distribution of Best Segment Lengths for NES Motifs ({model_name})')
+    plt.xlabel('Segment Length (amino acids)')
+    plt.ylabel('Density')
+    plt.xlim(0, max(all_chosen_segments) * 1.05)
+    plt.xticks(np.arange(0, max(all_chosen_segments) + 1, step=10))
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    if save_dir:
+        plt.savefig(f"{save_dir}/segment_length_distribution.png", dpi=300, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
+
 def main():
     """
     Main function to run the protein annotation plotting pipeline.
     """
     # File paths - modify these according to your file locations
-    tsv_file = "NESDB_combined_segments.tsv"  # Replace with your TSV file path
-    csv_file = "NESDB_combined_database.csv"  # Replace with your CSV file path
-    save_directory = "protein_plots"  # Optional: directory to save plots
+    t5_tsv_file = "T5_NESDB_combined_segments.tsv"
+    esm_tsv_file = "ESM_NESDB_combined_segments.tsv"
+    t5_model_name = "ProtT5"
+    esm_model_name = "ESM-2"
+    csv_file = "NESDB_combined_database.csv"
+    save_directory = "protein_plots"
     import os
     if not os.path.exists(save_directory):
         os.makedirs(save_directory)
-
-    print("Loading segmentation data...")
-    segmentation_data = load_segmentation_data(tsv_file)
-    print(f"Loaded data for {len(segmentation_data)} proteins")
-
-    print("Loading NES motif data...")
+    t5_segmentation_data = load_segmentation_data(t5_tsv_file)
+    esm_segmentation_data = load_segmentation_data(esm_tsv_file)
     nes_data = load_nes_data(csv_file)
-    print(f"Loaded {len(nes_data)} NES motifs")
 
-    best_nes = calculate_precent_of_match(segmentation_data, nes_data)
+    print("############# ProT5 data analysis #############")
+    calculate_best_segment_length_distribution(t5_segmentation_data, nes_data, save_dir=save_directory, model_name=t5_model_name)
+    best_nes = calculate_precent_of_match(t5_segmentation_data, nes_data)
     # take top 10 proteins with highest NES motif matching percentage
-    create_all_protein_plots(segmentation_data, nes_data, from_list=best_nes, save_dir=save_directory)
+    create_all_protein_plots(t5_segmentation_data, nes_data, from_list=["P33981"], save_dir=save_directory, model_name=t5_model_name)
+
+    print("############# ESM-2 data analysis #############")
+    calculate_best_segment_length_distribution(esm_segmentation_data, nes_data, save_dir=save_directory, model_name=esm_model_name)
+    best_nes = calculate_precent_of_match(esm_segmentation_data, nes_data)
+    # take top 10 proteins with highest NES motif matching percentage
+    create_all_protein_plots(esm_segmentation_data, nes_data, from_list=["P33981"], save_dir=save_directory, model_name=esm_model_name)
 
 
 if __name__ == "__main__":
