@@ -116,3 +116,4 @@ if __name__ == '__main__':
     print("Plotting Network results")
     plot_boxplot({"Positive Test": positive_score, "Negative Test": negative_score}, out_file_path="plots/network_boxplot.png")
     plot_roc_curve([0] * len(negative_score) + [1] * len(positive_score), np.concatenate([negative_score, positive_score]), out_file_path="plots/network_roc_curve.png")
+    torch.save(trained_network.state_dict(), f'models/trained_v2_layer_{chosen_embedding_layer}.pt')
