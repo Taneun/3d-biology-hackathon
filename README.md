@@ -42,22 +42,15 @@ The pipeline saves plots of embedding segments and NES overlaps under `protein_p
 from plotein import plot_protein_annotation, create_all_protein_plots
 # load data and call plotting functions
 ```
-### 2. Train Model
 
-```bash
-cd preperation
-python ex4.py 
-```
-Output: `preperation/models/trained_model_layer_33.pth`
-
-### 3. Extract Exposed and Helical Regions
+### 2. Extract Exposed and Helical Regions
 
 Run the `protein_prediction/exposed_helical_extraction/exposed_helical_analysis_and_extraction.ipynb` notebook (further documentation inside)
 
 Output: `protein_prediction/exposed_helical_extraction/data/residue_annotation.csv`
 
 
-### 4. Predict NESs across proteins and cross-reference with annotations
+### 3. Predict NESs across proteins and cross-reference with annotations
 Run the `protein_prediction/protein_pred.ipynb` notebook (further documentation inside)
 
 Output: `protein_prediction/data/false_positive_seqs.csv`
